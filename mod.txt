@@ -1,6 +1,6 @@
 {
-  "name": "! afterlifr",
-  "description": "ihateniggers",
+  "name": "! afterlife",
+  "description": "MenuUI",
   "author": "aziat/jack/hgdjxeck(me)",
   "version": "0.1.0",
   "priority": 10,
