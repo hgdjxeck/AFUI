@@ -34,43 +34,38 @@ function Aftelife:Init()
         layer = 1000,
         offset = 6,
         localized = false,
-        enabled = false,
-        animate_toggle = true,
-        animate_colors = true,
+        toggle_key = self.Options:GetValue("ToggleKey") or "delete",
+        use_default_close_key = true,
         accent_color = accent,
         foreground = accent:contrast(),
-        use_default_close_key = true,
-        create_items = function(menu)
-            self:CreateItems(menu)
-        end
+        create_items = callback(self, self, "CreateItems")
     })
 end
 
 function Aftelife:CreateItems(menu)
     local accent = menu.foreground
 
-    local root = menu:Holder({
-        name = "Root",
-        background_color = Color(0.12, 0.12, 0.12):with_alpha(0.50),
-        auto_height = false
-    })
-
-    local layout = root:Holder({
+    local layout = menu:Holder({
         name = "Layout",
-        auto_height = false
+        auto_height = false,
+        full_height = true
     })
 
     local sidebar = layout:Holder({
         name = "Sidebar",
         w = 160,
-        auto_height = false,
+        auto_height = true,
+        items_size = 26,
         background_color = Color(0.10, 0.10, 0.10):with_alpha(0.65),
         foreground = Color.white
     })
 
     local pages = layout:Holder({
         name = "Pages",
+        x = 170,
         auto_height = false,
+        full_height = true,
+        scroll_width = 6,
         background_color = Color(0.12, 0.12, 0.12):with_alpha(0.45)
     })
 
@@ -78,7 +73,7 @@ function Aftelife:CreateItems(menu)
     self._feature_state = self._feature_state or {}
     self._feature_items = {}
 
-    self:_AddTab(sidebar, pages, "main", "Funny", true, function(page)
+    self:_AddTab(menu, sidebar, pages, "main", "Funny", true, function(page)
         self:AddFeatureToggle(page, "test_toggle_1", "Test Toggle 1", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
@@ -92,7 +87,7 @@ function Aftelife:CreateItems(menu)
         end)
     end)
 
-    self:_AddTab(sidebar, pages, "func", "Functions", false, function(page)
+    self:_AddTab(menu, sidebar, pages, "func", "Functions", false, function(page)
         self:AddFeatureToggle(page, "feature_a", "Feature A", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
@@ -102,27 +97,29 @@ function Aftelife:CreateItems(menu)
         end)
     end)
 
-    self:_AddTab(sidebar, pages, "misc", "Misc", false, function(page)
+    self:_AddTab(menu, sidebar, pages, "misc", "Misc", false, function(page)
         self:AddFeatureToggle(page, "misc_a", "Misc A", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
     end)
 
-    self:_AddTab(sidebar, pages, "opt", "Optimization", false, function(page)
+    self:_AddTab(menu, sidebar, pages, "opt", "Optimization", false, function(page)
         self:AddFeatureToggle(page, "opt_a", "Optimization A", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
     end)
 end
 
-function Aftelife:_AddTab(sidebar, pages, id, text, is_default, build_callback)
+function Aftelife:_AddTab(menu, sidebar, pages, id, text, is_default, build_callback)
     local page = pages:Holder({
         name = id,
         visible = false,
-        auto_height = false,
-        background_color = Color(0, 0, 0, 0)
+        auto_height = true,
+        items_size = 28,
+        scroll_width = 6,
+        background_color = Color(0, 0, 0, 0),
+        foreground = Color.white
     })
-
     self._pages[id] = page
 
     sidebar:Button({
@@ -130,7 +127,7 @@ function Aftelife:_AddTab(sidebar, pages, id, text, is_default, build_callback)
         text = text,
         w = 150,
         background_color = Color(0, 0, 0, 0),
-        highlight_color = self._menu.foreground:with_alpha(0.25),
+        highlight_color = menu.foreground:with_alpha(0.25),
         text_color = Color.white,
         on_callback = function()
             self:SwitchTab(id)
@@ -201,25 +198,16 @@ function Aftelife:GetFeature(key)
 end
 
 function Aftelife:Toggle()
-    self:Init()
-    self._menu:SetEnabled(not self._menu:Enabled())
-end
+    if not self._menu then
+        self:Init()
+    end
 
-_G.Aftelife = _G.Aftelife or Aftelife:new()
-
-Hooks:Add("MenuUpdate", "Aftelife_ToggleKey", function()
-    if not _G.Aftelife then
+    if not self._menu then
         return
     end
 
-    local keyboard = Input:keyboard()
-    if keyboard and keyboard:pressed(Idstring("delete")) then
-        _G.Aftelife:Toggle()
-    end
-end)
+    self._menu:SetEnabled(not self._menu:Enabled())
+end
 
-Hooks:Add("BeardLibCreateCustomMenus", "Aftelife_EnsureInit", function()
-    if _G.Aftelife then
-        _G.Aftelife:Init()
-    end
-end)
+Aftelife = Aftelife or Aftelife:new()
+Aftelife:Init()
