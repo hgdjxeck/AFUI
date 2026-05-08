@@ -1,0 +1,9 @@
+<mod name="Aftelife" global_key="Aftelife" core_class=" menu.lua" min_lib_ver="4.5">
+
+    <Options build_menu="false">
+        <options>
+            <option type="string" default_value="delete" name="ToggleKey"/>
+        </options>
+    </Options>
+
+</mod>
