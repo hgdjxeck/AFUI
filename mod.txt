@@ -1,14 +1,14 @@
 {
-  "name": "Aziat BeardLib Menu",
-  "description": "Minimal BeardLib MenuUI test menu with notebook tabs.",
-  "author": "aziat",
+  "name": "! afterlifr",
+  "description": "ihateniggers",
+  "author": "aziat/jack/hgdjxeck(me)",
   "version": "0.1.0",
   "priority": 10,
   "blt_version": 2,
   "hooks": [
     {
         "hook_id": "lib/setups/menusetup",
-        "script_path": "hooks/menu.lua",	
+        "script_path": "menu.lua",	
 	}
    ]		
 }
