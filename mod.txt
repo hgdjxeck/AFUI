@@ -2,6 +2,7 @@
   "name": "! afterlife",
   "description": "MenuUI",
   "author": "aziat/jack/hgdjxeck(me)",
+  "image": "redskyes.png",
   "version": "0.1.0",
   "priority": 10,
   "blt_version": 2,
