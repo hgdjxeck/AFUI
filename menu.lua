@@ -8,6 +8,7 @@ function Aftelife:new()
     o._current = nil
     o._feature_state = {}
     o._feature_items = {}
+    o._save_path = (SavePath or "") .. "aftelife_config.json"
     return o
 end
 
@@ -27,6 +28,8 @@ function Aftelife:Init()
         return
     end
 
+    self:LoadConfig()
+
     local accent = Color(0.20, 0.48, 0.95)
 
     self._menu = MenuUI:new({
@@ -42,8 +45,49 @@ function Aftelife:Init()
     })
 end
 
+function Aftelife:SaveConfig()
+    if not SavePath or not json then
+        return
+    end
+
+    local path = SavePath .. "aftelife_config.json"
+    local file = io.open(path, "w")
+    if not file then
+        return
+    end
+
+    file:write(json.encode(self._feature_state or {}))
+    file:close()
+end
+
+
+function Aftelife:LoadConfig()
+    if not SavePath or not json then
+        return
+    end
+
+    local path = SavePath .. "aftelife_config.json"
+    local file = io.open(path, "r")
+    if not file then
+        return
+    end
+
+    local content = file:read("*all")
+    file:close()
+
+    local ok, data = pcall(json.decode, content or "")
+    if ok and type(data) == "table" then
+        self._feature_state = data
+    end
+end
+
 function Aftelife:CreateItems(menu)
     local accent = menu.foreground
+
+    if not self._config_loaded then
+        self:LoadConfig()
+        self._config_loaded = true
+    end
 
     local layout = menu:Holder({
         name = "Layout",
@@ -73,7 +117,7 @@ function Aftelife:CreateItems(menu)
     self._feature_state = self._feature_state or {}
     self._feature_items = {}
 
-    self:_AddTab(menu, sidebar, pages, "main", "Funny", true, function(page)
+    self:_AddTab(menu, sidebar, pages, "main", "Main", true, function(page)
         self:AddFeatureToggle(page, "test_toggle_1", "Test Toggle 1", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
@@ -105,6 +149,12 @@ function Aftelife:CreateItems(menu)
 
     self:_AddTab(menu, sidebar, pages, "opt", "Optimization", false, function(page)
         self:AddFeatureToggle(page, "opt_a", "Optimization A", false, function(enabled)
+            -- сюда потом вставишь свою функцию
+        end)
+    end)
+
+    self:_AddTab(menu, sidebar, pages, "fun", "Funny", false, function(page)
+        self:AddFeatureToggle(page, "fun_a", "Funny A", false, function(enabled)
             -- сюда потом вставишь свою функцию
         end)
     end)
@@ -157,7 +207,8 @@ function Aftelife:SwitchTab(name)
 end
 
 function Aftelife:AddFeatureToggle(parent, key, text, default, on_change)
-    local state = default and true or false
+    local saved = self._feature_state[key]
+    local state = saved ~= nil and saved or (default and true or false)
     self._feature_state[key] = state
 
     local item = parent:Toggle({
@@ -167,6 +218,7 @@ function Aftelife:AddFeatureToggle(parent, key, text, default, on_change)
         on_callback = function(toggle_item)
             local enabled = not not toggle_item.value
             self._feature_state[key] = enabled
+            self:SaveConfig()
             self:SafeCall(on_change, enabled, toggle_item)
         end
     })
