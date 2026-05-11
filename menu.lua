@@ -1,73 +1,36 @@
-Aftelife = Aftelife or {}
-Aftelife.__index = Aftelife
+AFUI = AFUI or {}
+AFUI.__index = AFUI
 
-function Aftelife:new()
+function AFUI:new()
     local o = setmetatable({}, self)
     o._menu = nil
-    o._pages = {}
-    o._current = nil
+    o._holder = nil
+    o._current = "main"
+    o._default_tab = "main"
     o._feature_state = {}
     o._feature_items = {}
-    o._save_path = (SavePath or "") .. "aftelife_config.json"
+    o._page_items = {}
+    o._save_path = ((SavePath or ModPath or "") .. "afui_config.json")
     return o
 end
 
-function Aftelife:SafeCall(fn, ...)
+function AFUI:SafeCall(fn, ...)
     if type(fn) ~= "function" then
         return
     end
 
     local ok, err = pcall(fn, ...)
     if not ok then
-        log("[Aftelife] " .. tostring(err))
+        log("[AFUI] " .. tostring(err))
     end
 end
 
-function Aftelife:Init()
-    if self._menu then
+function AFUI:LoadConfig()
+    if not json then
         return
     end
 
-    self:LoadConfig()
-
-    local accent = Color(0.20, 0.48, 0.95)
-
-    self._menu = MenuUI:new({
-        name = "Aftelife",
-        layer = 1000,
-        offset = 6,
-        localized = false,
-        toggle_key = self.Options:GetValue("ToggleKey") or "delete",
-        use_default_close_key = true,
-        accent_color = accent,
-        foreground = accent:contrast(),
-        create_items = callback(self, self, "CreateItems")
-    })
-end
-
-function Aftelife:SaveConfig()
-    if not SavePath or not json then
-        return
-    end
-
-    local path = SavePath .. "aftelife_config.json"
-    local file = io.open(path, "w")
-    if not file then
-        return
-    end
-
-    file:write(json.encode(self._feature_state or {}))
-    file:close()
-end
-
-
-function Aftelife:LoadConfig()
-    if not SavePath or not json then
-        return
-    end
-
-    local path = SavePath .. "aftelife_config.json"
-    local file = io.open(path, "r")
+    local file = io.open(self._save_path, "r")
     if not file then
         return
     end
@@ -81,185 +44,247 @@ function Aftelife:LoadConfig()
     end
 end
 
-function Aftelife:CreateItems(menu)
-    local accent = menu.foreground
-
-    if not self._config_loaded then
-        self:LoadConfig()
-        self._config_loaded = true
+function AFUI:SaveConfig()
+    if not json then
+        return
     end
 
-    local layout = menu:Holder({
-        name = "Layout",
-        auto_height = false,
-        full_height = true
-    })
+    local file = io.open(self._save_path, "w")
+    if not file then
+        return
+    end
 
-    local sidebar = layout:Holder({
-        name = "Sidebar",
-        w = 160,
-        auto_height = true,
-        items_size = 26,
-        background_color = Color(0.10, 0.10, 0.10):with_alpha(0.65),
-        foreground = Color.white
-    })
-
-    local pages = layout:Holder({
-        name = "Pages",
-        x = 170,
-        auto_height = false,
-        full_height = true,
-        scroll_width = 6,
-        background_color = Color(0.12, 0.12, 0.12):with_alpha(0.45)
-    })
-
-    self._pages = {}
-    self._feature_state = self._feature_state or {}
-    self._feature_items = {}
-
-    self:_AddTab(menu, sidebar, pages, "main", "Main", true, function(page)
-        self:AddFeatureToggle(page, "test_toggle_1", "Test Toggle 1", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-
-        self:AddFeatureToggle(page, "test_toggle_2", "Test Toggle 2", true, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-
-        self:AddActionButton(page, "Test Button", function()
-            -- обычная кнопка без состояния
-        end)
-    end)
-
-    self:_AddTab(menu, sidebar, pages, "func", "Functions", false, function(page)
-        self:AddFeatureToggle(page, "feature_a", "Feature A", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-
-        self:AddFeatureToggle(page, "feature_b", "Feature B", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-    end)
-
-    self:_AddTab(menu, sidebar, pages, "misc", "Misc", false, function(page)
-        self:AddFeatureToggle(page, "misc_a", "Misc A", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-    end)
-
-    self:_AddTab(menu, sidebar, pages, "opt", "Optimization", false, function(page)
-        self:AddFeatureToggle(page, "opt_a", "Optimization A", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-    end)
-
-    self:_AddTab(menu, sidebar, pages, "fun", "Funny", false, function(page)
-        self:AddFeatureToggle(page, "fun_a", "Funny A", false, function(enabled)
-            -- сюда потом вставишь свою функцию
-        end)
-    end)
+    file:write(json.encode(self._feature_state or {}))
+    file:close()
 end
 
-function Aftelife:_AddTab(menu, sidebar, pages, id, text, is_default, build_callback)
-    local page = pages:Holder({
-        name = id,
-        visible = false,
-        auto_height = true,
-        items_size = 28,
-        scroll_width = 6,
-        background_color = Color(0, 0, 0, 0),
-        foreground = Color.white
-    })
-    self._pages[id] = page
+function AFUI:_RegisterPageItem(page, item)
+    if not page or not item then
+        return item
+    end
 
-    sidebar:Button({
+    self._page_items[page] = self._page_items[page] or {}
+    table.insert(self._page_items[page], item)
+
+    return item
+end
+
+function AFUI:_AddTabButton(id, text, is_default)
+    local accent = Color(0.20, 0.48, 0.95)
+
+    local btn = self._holder:Button({
         name = id .. "_tab",
         text = text,
-        w = 150,
         background_color = Color(0, 0, 0, 0),
-        highlight_color = menu.foreground:with_alpha(0.25),
-        text_color = Color.white,
+        highlight_color = accent:with_alpha(0.25),
         on_callback = function()
             self:SwitchTab(id)
         end
     })
 
-    if build_callback then
-        build_callback(page)
+    if is_default then
+        self._current = id
     end
 
-    if is_default or not self._current then
-        self._current = id
-        page:SetVisible(true)
-    end
+    return btn
 end
 
-function Aftelife:SwitchTab(name)
-    if self._current == name then
+function AFUI:CreateItems(menu)
+    local accent = Color(0.20, 0.48, 0.95)
+
+    self._holder = menu:DivGroup({
+        name = "AFUI_Main",
+        background_visible = true,
+        background_color = Color(0.8, 0.2, 0.2, 0.2),
+    })
+
+    self._page_items = {}
+    self._feature_items = {}
+    self._feature_state = self._feature_state or {}
+
+    self:_AddTabButton("main", "Main", true)
+    self:_AddTabButton("func", "Functions", false)
+    self:_AddTabButton("misc", "Misc", false)
+    self:_AddTabButton("opt", "Optimization", false)
+    self:_AddTabButton("fun", "Funny", false)
+
+    self._holder:Divider({
+        name = "AFUI_Spacer",
+        text = "",
+    })
+
+    self:AddFeatureToggle("main", "auto_save", "Auto save", true, function(enabled)
+        self._feature_state.auto_save = enabled and true or false
+        self:SaveConfig()
+    end)
+
+    self:AddFeatureToggle("main", "test_toggle_1", "Test Toggle 1", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddFeatureToggle("main", "test_toggle_2", "Test Toggle 2", true, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddActionButton("main", "Test Button", function()
+        -- обычная кнопка без состояния
+    end)
+
+    self:AddFeatureToggle("func", "feature_a", "Feature A", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddFeatureToggle("func", "feature_b", "Feature B", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddFeatureToggle("misc", "misc_a", "Misc A", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddFeatureToggle("opt", "opt_a", "Optimization A", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:AddFeatureToggle("fun", "fun_a", "Funny A", false, function(enabled)
+        -- сюда потом вставишь свою функцию
+    end)
+
+    self:SwitchTab(self._default_tab, true)
+    self._holder:AlignItems(true, true)
+end
+
+function AFUI:SwitchTab(name, force)
+    if not force and self._current == name then
         return
     end
 
-    for k, page in pairs(self._pages) do
-        page:SetVisible(k == name)
+    self._current = name
+
+    for page, items in pairs(self._page_items or {}) do
+        local visible = page == name
+
+        for _, item in ipairs(items) do
+            if item and item.SetVisible then
+                item:SetVisible(visible, true)
+            end
+        end
     end
 
-    self._current = name
+    if self._holder and self._holder.AlignItems then
+        self._holder:AlignItems(true, true)
+    end
 end
 
-function Aftelife:AddFeatureToggle(parent, key, text, default, on_change)
-    local saved = self._feature_state[key]
-    local state = saved ~= nil and saved or (default and true or false)
+function AFUI:AddFeatureToggle(page, key, text, default, on_change)
+    local state = self._feature_state[key]
+    if state == nil then
+        state = default and true or false
+    end
+
     self._feature_state[key] = state
 
-    local item = parent:Toggle({
+    local item = self._holder:Toggle({
         name = key,
         text = text,
         value = state,
         on_callback = function(toggle_item)
-            local enabled = not not toggle_item.value
+            local enabled = not not toggle_item:Value()
             self._feature_state[key] = enabled
             self:SaveConfig()
             self:SafeCall(on_change, enabled, toggle_item)
         end
     })
 
+    self:_RegisterPageItem(page, item)
+
+    if page ~= self._current then
+        item:SetVisible(false, true)
+    end
+
     self._feature_items[key] = item
     return item
 end
 
-function Aftelife:AddActionButton(parent, text, callback)
-    return parent:Button({
+function AFUI:AddActionButton(page, text, callback)
+    local item = self._holder:Button({
         text = text,
         on_callback = function(button_item)
             self:SafeCall(callback, button_item)
         end
     })
+
+    self:_RegisterPageItem(page, item)
+
+    if page ~= self._current then
+        item:SetVisible(false, true)
+    end
+
+    return item
 end
 
-function Aftelife:SetFeature(key, enabled, run_callback)
+function AFUI:SetFeature(key, enabled, run_callback)
     self._feature_state[key] = enabled and true or false
 
-    local item = self._feature_items[key]
-    if item and item.SetValue then
-        item:SetValue(enabled and true or false, run_callback ~= false)
+    if self._holder and self._holder.SetChecked then
+        self._holder:SetChecked(key, enabled and true or false, run_callback ~= false)
     end
 end
 
-function Aftelife:GetFeature(key)
-    return self._feature_state[key] and true or false
+function AFUI:GetFeature(key)
+    return self._feature_state[key] == true
 end
 
-function Aftelife:Toggle()
+function AFUI:Init()
+    if self._menu then
+        return
+    end
+
+    self:LoadConfig()
+
+    local accent = Color(0.20, 0.48, 0.95)
+
+    self._menu = MenuUI:new({
+        name = "AFUI",
+        layer = 1000,
+        offset = 6,
+        localized = false,
+        toggle_key = (self.Options and self.Options:GetValue("ToggleKey")) or "delete",
+        use_default_close_key = true,
+        accent_color = accent,
+        create_items = callback(self, self, "CreateItems"),
+        enabled = false,
+        animate_toggle = true,
+    })
+end
+
+function AFUI:Toggle()
     if not self._menu then
         self:Init()
     end
 
-    if not self._menu then
-        return
+    if self._menu then
+        self._menu:Toggle()
     end
-
-    self._menu:SetEnabled(not self._menu:Enabled())
 end
 
-Aftelife = Aftelife or Aftelife:new()
-Aftelife:Init()
+function ToggleAFUI()
+    if AFUI and AFUI.Toggle then
+        AFUI:Toggle()
+    end
+end
+
+function OpenAFUI()
+    if AFUI and AFUI._menu then
+        AFUI._menu:Enable()
+    end
+end
+
+function CloseAFUI()
+    if AFUI and AFUI._menu then
+        AFUI._menu:Disable()
+    end
+end
+
+AFUI = AFUI:new()
+AFUI:Init()
