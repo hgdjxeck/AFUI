@@ -1,7 +1,7 @@
 {
-  "name": "! afterlife",
+  "name": "! AFUI",
   "description": "MenuUI",
-  "author": "aziat/jack/hgdjxeck(me)",
+  "author": "qxc(graham)",
   "image": "redskyes.png",
   "version": "0.1.0",
   "priority": 10,
@@ -9,7 +9,11 @@
   "hooks": [
     {
         "hook_id": "lib/setups/menusetup",
-        "script_path": "menu.lua",	
-	}
-   ]		
+        "script_path": "menu.lua"
+    },
+    {
+        "hook_id": "lib/setups/gamesetup",
+        "script_path": "menu.lua"
+    }
+  ]
 }
