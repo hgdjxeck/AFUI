@@ -3,12 +3,23 @@
   "description": "Menu with functions and QOL",
   "author": "jack(hgdjxeck)",
   "image": "redskyes.png",
-  "version": "0.2.0",
+  "version": "2.1",
   "blt_version": 2,
-  "hooks": [
     {
-        "hook_id": "lib/managers/menumanager",
-        "script_path": "lua/main.lua"
+      "hook_id": "lib/managers/menumanager",
+      "script_path": "main.lua"
+    },
+    {
+      "hook_id": "lib/network/base/networkpeer",
+      "script_path": "main.lua"
+    },
+    {
+      "hook_id": "lib/managers/blackmarketmanager",
+      "script_path": "main.lua"
+    },
+    {
+      "hook_id": "lib/network/base/basenetworksession",
+      "script_path": "main.lua"
     }
   ]
 }
